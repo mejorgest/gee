@@ -1,5 +1,3 @@
-# gee
-
 import geemap, ee
 ee.Authenticate()
 ee.Initialize()
@@ -31,37 +29,33 @@ roi = ee.Geometry.Polygon(coords);
 data=ee.ImageCollection("COPERNICUS/S2").filterBounds(roi);
 
 
-image=ee.Image(data.filterDate("2023-01-01","2023-12-31").sort("CLOUD_COVERAGE_ASSESSMENT").first());
+image = ee.Image(data.filterDate("2025-01-01", "2025-12-31").sort("CLOUD_COVERAGE_ASSESSMENT").sort('system:time_start', False).first());
 
+# Obtener la fecha de la imagen
+image_date_millis = image.get('system:time_start')
+image_date = ee.Date(image_date_millis).format('YYYY-MM-dd') # Formato Año-Mes-Día
 
-ndvi=image.expression(
-"(NIR - RED) / (NIR + RED)",
-{"NIR":image.select("B8"),
-"RED":image.select("B4")}).rename('NDVI'); # Rename the band for clarity
+# Obtener la información del servidor e imprimirla
+print('Fecha de la imagen seleccionada:', image_date.getInfo())
 
+# También puedes ver la nubosidad para confirmar que elegiste la menos nubosa
+cloud_cover = image.get('CLOUD_COVERAGE_ASSESSMENT')
+print('Evaluación de cobertura nubosa:', cloud_cover.getInfo())
 
-# Clip the NDVI image to the region of interest
-ndvi_clipped = ndvi.clip(roi)
+# Calcular el área en metros cuadrados (ejecución en el servidor GEE)
+area_m2_server = roi.area()
 
+# Obtener el valor del área del servidor
+area_m2_client = area_m2_server.getInfo()
 
-display={
-    "min":0,
-    "max":1,
-    "palette":[ 'red','orange', 'yellow','yellowgreen', 'green','black']
-}
+# Convertir a hectáreas (1 ha = 10,000 m²)
+area_ha = area_m2_client / 10000
 
-# Add the clipped NDVI layer to the map
-Map.addLayer(ndvi_clipped, display, 'NDVI Clipped'); # Use the clipped layer
-Map
+# Convertir a kilómetros cuadrados (1 km² = 1,000,000 m²)
+area_km2 = area_m2_client / 1000000
 
-
-
-
-
-
-
-
-
-
-
-
+# Imprimir los resultados
+print(f"Área de la ROI seleccionada:")
+print(f"- Metros cuadrados: {area_m2_client:,.2f} m²")
+print(f"- Hectáreas: {area_ha:,.2f} ha")
+print(f"- Kilómetros cuadrados: {area_km2:,.2f} km²")
